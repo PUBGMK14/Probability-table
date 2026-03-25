@@ -1,561 +1,485 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>모배 확률표 뷰어</title>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+ 
+   <title>모배 확률표 뷰어</title>
+  <!-- Open Graph -->
+  <meta property="og:title" content="PUBG INFO - 모배 확률표 뷰어">
+  <meta property="og:description" content="PUBG MOBILE 상자 확률을 한눈에 확인하세요. 등급별 필터, 실시간 시트 연동.">
+  <meta property="og:image" content="https://wsrv.nl/?url=pbs.twimg.com/media/HD0AyoGb0AAxXjQ.jpg:large&w=1200&h=630&fit=cover">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://pubgmk14.github.io/Probability-table/">
+  <meta property="og:type" content="website">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:      #0a0c0f;
-      --panel:   #0f1318;
-      --border:  #2a3540;
-      --accent:  #c8a84b;
-      --accent2: #4b8fc8;
-      --text:    #d4dde6;
-      --dim:     #5a6a7a;
-      --danger:  #c84b4b;
-      --green:   #4bc87a;
-      --red:     #e05c5c;
-      --mono:    'Share Tech Mono', monospace;
-      --sans:    'Rajdhani', sans-serif;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --accent:    #6c63ff;
+      --accent-lt: #9d97ff;
+      --accent-bg: rgba(108,99,255,.1);
+      --accent-bd: rgba(108,99,255,.28);
+      --red:    #f04e4e;
+      --pink:   #e060a8;
+      --purple: #9660dc;
+      --blue:   #4488e8;
+      --green:  #38b870;
+      --sans:   'DM Sans', sans-serif;
+      --mono:   'DM Mono', monospace;
+      --ease:   cubic-bezier(.4,0,.2,1);
+    }
+    [data-theme="dark"] {
+      --bg:       #0e1117;
+      --surface:  #161b24;
+      --surface2: #1c2333;
+      --surface3: #232d42;
+      --bd:       rgba(255,255,255,.07);
+      --bd2:      rgba(255,255,255,.13);
+      --txt:      #e8edf5;
+      --txt2:     #8892a4;
+      --txt3:     #4e5a6e;
+      --sh:       0 4px 24px rgba(0,0,0,.4);
+      --sh-sm:    0 2px 8px rgba(0,0,0,.3);
+    }
+    [data-theme="light"] {
+      --bg:       #f2f4f8;
+      --surface:  #ffffff;
+      --surface2: #f8f9fc;
+      --surface3: #edf0f7;
+      --bd:       rgba(0,0,0,.07);
+      --bd2:      rgba(0,0,0,.13);
+      --txt:      #111827;
+      --txt2:     #6b7280;
+      --txt3:     #9ca3af;
+      --sh:       0 4px 24px rgba(0,0,0,.08);
+      --sh-sm:    0 2px 8px rgba(0,0,0,.05);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      min-height: 100vh;
-      padding: 28px 16px 60px;
-    }
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(200,168,75,.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(200,168,75,.04) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-    body::after {
-      content: '';
-      position: fixed; inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
-      pointer-events: none;
-      z-index: 0;
+      background: var(--bg); color: var(--txt);
+      font-family: var(--sans); min-height: 100vh;
+      transition: background .3s, color .3s;
     }
 
-    .container {
-      position: relative;
-      z-index: 1;
-      max-width: 960px;
-      margin: 0 auto;
-    }
+    /* ══ LAYOUT ══ */
+    .layout { display: flex; min-height: 100vh; }
 
-    /* ── TOP HEADER ── */
-    .top-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 28px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
+    /* ══ SIDEBAR ══ */
+    .sidebar {
+      width: 252px; flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--bd);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+      transition: transform .25s var(--ease);
     }
-    .badge { font-family: var(--mono); font-size: 10px; letter-spacing: .15em; color: var(--accent); margin-bottom: 4px; }
-    h1 { font-size: 24px; font-weight: 700; letter-spacing: .05em; color: #fff; line-height: 1.1; }
-    .sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; }
+    .sb-head {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--bd);
+    }
+    .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 3px; }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--accent-bg); border: 1px solid var(--accent-bd);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .logo-icon svg { width: 16px; height: 16px; color: var(--accent); }
+    .logo-name { font-size: 15px; font-weight: 700; color: var(--txt); letter-spacing: -.02em; }
+    .logo-sub  { font-size: 10px; color: var(--txt3); font-family: var(--mono); letter-spacing: .08em; }
 
-    /* ── Loading / Error ── */
-    .loading-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--accent);
-      padding: 40px 0;
-      justify-content: center;
+    .sb-search {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--bd);
     }
-    .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-    .load-err {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--danger);
-      padding: 16px 18px;
-      border: 1px solid rgba(200,75,75,.3);
-      border-left: 3px solid var(--danger);
-      background: rgba(200,75,75,.05);
-      display: none;
-    }
-    .load-err.show { display: block; }
-
-    /* ── Freshness bar ── */
-    .freshness {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--dim);
-      margin-bottom: 20px;
-      display: none;
-      align-items: center;
-      gap: 6px;
-    }
-    .freshness.show { display: flex; flex-wrap: wrap; }
-    .freshness .dot { color: var(--green); }
-    .freshness .cnt { color: var(--accent); }
-
-    /* ── Search + Filter bar ── */
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-      align-items: center;
-    }
-    .search-wrap {
-      position: relative;
-      flex: 1;
-      min-width: 180px;
-    }
-    .search-wrap input {
-      width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 9px 12px 9px 34px;
-      outline: none;
+    .sb-search-inner {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface2); border: 1px solid var(--bd);
+      border-radius: var(--radius-sm); padding: 7px 10px;
       transition: border-color .2s;
     }
-    .search-wrap input:focus { border-color: var(--accent); }
-    .search-wrap input::placeholder { color: var(--dim); }
-    .search-icon {
-      position: absolute;
-      left: 10px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--dim);
-      font-size: 13px;
-      pointer-events: none;
+    .sb-search-inner:focus-within { border-color: var(--accent); }
+    .sb-search-inner svg { width: 12px; height: 12px; color: var(--txt3); flex-shrink: 0; }
+    .sb-search-inner input {
+      background: none; border: none; outline: none;
+      font-family: var(--sans); font-size: 12px; color: var(--txt); width: 100%;
     }
+    .sb-search-inner input::placeholder { color: var(--txt3); }
 
-    .grade-filter {
-      display: flex;
-      gap: 5px;
-      flex-wrap: wrap;
+    /* View toggle inside sidebar */
+    .sb-view-toggle {
+      display: flex; gap: 4px;
+      padding: 10px 14px 6px;
     }
-    .gf-chip {
-      font-family: var(--mono);
-      font-size: 10px;
-      padding: 5px 10px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--dim);
-      cursor: pointer;
-      transition: all .15s;
-      letter-spacing: .05em;
+    .svt {
+      flex: 1; font-size: 11px; font-family: var(--mono); padding: 6px 0;
+      border: 1px solid var(--bd); border-radius: var(--radius-sm);
+      background: transparent; color: var(--txt3); cursor: pointer;
+      transition: all .15s; text-align: center;
     }
-    .gf-chip:hover { border-color: var(--accent); color: var(--accent); }
-    .gf-chip.active { border-color: var(--accent); background: rgba(200,168,75,.12); color: var(--accent); }
+    .svt:hover  { color: var(--txt2); border-color: var(--bd2); }
+    .svt.active { background: var(--accent-bg); border-color: var(--accent-bd); color: var(--accent-lt); }
 
-    /* ── Crate selector ── */
-    .crate-select-wrap {
+    .sb-list {
+      flex: 1; overflow-y: auto; padding: 4px 0 8px;
+      scrollbar-width: thin; scrollbar-color: var(--bd2) transparent;
+    }
+    .sb-list::-webkit-scrollbar { width: 3px; }
+    .sb-list::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 3px; }
+
+    .sb-section-lbl {
+      font-size: 9px; color: var(--txt3); font-family: var(--mono);
+      letter-spacing: .12em; text-transform: uppercase;
+      padding: 8px 16px 4px;
+    }
+    .crate-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 16px; cursor: pointer; transition: background .12s;
       position: relative;
-      margin-bottom: 20px;
     }
-    .crate-select-wrap select {
-      width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 11px 36px 11px 12px;
-      outline: none;
-      appearance: none;
-      cursor: pointer;
-      transition: border-color .2s;
+    .crate-item:hover { background: var(--surface2); }
+    .crate-item.active { background: var(--accent-bg); }
+    .crate-item.active::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
     }
-    .crate-select-wrap select:focus { border-color: var(--accent); }
-    .crate-select-wrap select option { background: #141a22; }
-    .crate-arrow {
-      position: absolute;
-      right: 12px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--accent);
-      pointer-events: none;
-      font-size: 10px;
+    .ci-name {
+      font-size: 12px; color: var(--txt2); flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
     }
+    .crate-item.active .ci-name { color: var(--accent-lt); font-weight: 500; }
+    .ci-count { font-size: 10px; font-family: var(--mono); color: var(--txt3); flex-shrink: 0; }
+    .crate-item.active .ci-count { color: var(--accent); }
 
-    /* ── Crate panel ── */
-    .crate-panel {
-      position: relative;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      padding: 22px 20px 18px;
-      margin-bottom: 28px;
-      display: none;
-      animation: fadeIn .35s ease;
+    .sb-foot {
+      padding: 12px 16px; border-top: 1px solid var(--bd);
     }
-    .crate-panel.show { display: block; }
-    .crate-panel::before, .crate-panel::after,
-    .crate-panel .cbl, .crate-panel .cbr {
-      content: '';
-      position: absolute;
-      width: 12px; height: 12px;
-      border-color: var(--accent);
-      border-style: solid;
-    }
-    .crate-panel::before { top:-1px;    left:-1px;   border-width: 2px 0 0 2px; }
-    .crate-panel::after  { top:-1px;    right:-1px;  border-width: 2px 2px 0 0; }
-    .crate-panel .cbl    { bottom:-1px; left:-1px;   border-width: 0 0 2px 2px; }
-    .crate-panel .cbr    { bottom:-1px; right:-1px;  border-width: 0 2px 2px 0; }
+    .sb-stats { display: flex; justify-content: space-between; }
+    .sbs-item { text-align: center; }
+    .sbs-val { font-size: 17px; font-weight: 700; color: var(--txt); }
+    .sbs-lbl { font-size: 9px; color: var(--txt3); font-family: var(--mono); }
 
-    .crate-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: .04em;
-      margin-bottom: 6px;
-    }
-    .crate-meta {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--dim);
-      margin-bottom: 16px;
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .crate-meta span { display: flex; align-items: center; gap: 4px; }
-    .crate-meta .hl { color: var(--accent); }
+    /* ══ MAIN ══ */
+    .main { flex: 1; margin-left: 252px; display: flex; flex-direction: column; min-height: 100vh; }
 
-    /* ── Grade summary chips ── */
-    .grade-summary {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 16px;
+    /* ══ TOPBAR ══ */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--bd);
+      padding: 0 26px; height: 54px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
     }
-    .gs-chip {
-      font-family: var(--mono);
-      font-size: 10px;
-      padding: 4px 10px;
-      border-radius: 2px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .topbar-l { display: flex; align-items: center; gap: 8px; }
+    .breadcrumb {
+      font-size: 13px; color: var(--txt2);
+      display: flex; align-items: center; gap: 5px;
     }
-    .gs-chip .gname { font-weight: 700; }
-    .gs-chip .gpct  { opacity: .85; }
-    .gs-chip .gcnt  { opacity: .6; font-size: 9px; }
+    .breadcrumb .sep { color: var(--txt3); }
+    .breadcrumb .cur { color: var(--txt); font-weight: 500; }
+    .topbar-r { display: flex; align-items: center; gap: 8px; }
+    .live-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; font-family: var(--mono); color: var(--green);
+      background: rgba(56,184,112,.1); border: 1px solid rgba(56,184,112,.2);
+      border-radius: 20px; padding: 4px 10px;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      animation: blink 2s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: var(--radius-sm);
+      border: 1px solid var(--bd2); background: var(--surface2);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all .15s; color: var(--txt2);
+    }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .icon-btn svg { width: 14px; height: 14px; }
+    .mob-btn { display: none; }
 
-    /* ── Table ── */
-    .table-wrap {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-family: var(--mono);
-      font-size: 12px;
-    }
-    thead th {
-      padding: 8px 12px;
-      text-align: left;
-      font-size: 9px;
-      letter-spacing: .12em;
-      color: var(--dim);
-      text-transform: uppercase;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    thead th.right { text-align: right; }
-    thead th.center { text-align: center; }
+    /* ══ CONTENT ══ */
+    .content { flex: 1; padding: 26px; }
 
-    tbody tr {
-      border-bottom: 1px solid rgba(42,53,64,.6);
-      transition: background .12s;
-    }
-    tbody tr:hover { background: rgba(200,168,75,.04); }
-    tbody tr.hidden-row { display: none; }
+    /* ══ ALL-CRATES GRID VIEW ══ */
+    .all-view { animation: fadeUp .3s var(--ease); }
+    .view-header { margin-bottom: 18px; }
+    .view-title { font-size: 20px; font-weight: 700; color: var(--txt); letter-spacing: -.02em; }
+    .view-sub   { font-size: 12px; color: var(--txt3); font-family: var(--mono); margin-top: 3px; }
 
-    tbody td {
-      padding: 9px 12px;
-      vertical-align: middle;
-    }
-    .td-rank {
-      color: var(--dim);
-      font-size: 10px;
-      width: 36px;
-    }
-    .td-item {
-      color: var(--text);
-      font-size: 12px;
-      min-width: 120px;
-    }
-    .td-grade {
-      width: 70px;
-    }
-    .grade-tag {
-      display: inline-block;
-      font-size: 9px;
-      padding: 2px 7px;
-      border-radius: 2px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .td-prob {
-      text-align: right;
-      min-width: 70px;
-    }
-    .prob-val { color: #fff; font-size: 13px; }
-
-    .td-bar {
-      width: 140px;
-      padding-right: 18px;
-    }
-    .bar-bg {
-      background: rgba(255,255,255,.06);
-      border-radius: 2px;
-      height: 6px;
-      overflow: hidden;
-      min-width: 60px;
-    }
-    .bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width .4s ease;
-    }
-
-    .td-cumul {
-      text-align: right;
-      color: var(--dim);
-      font-size: 10px;
-      white-space: nowrap;
-    }
-
-    /* ── Empty ── */
-    .empty-msg {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--dim);
-      text-align: center;
-      padding: 40px 0;
-    }
-
-    /* ── All craters grid (initial view) ── */
-    #all-view {
-      display: none;
-    }
-    #all-view.show { display: block; }
-
-    .all-grid {
+    .crate-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
       gap: 10px;
     }
     .crate-card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent2);
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
-      position: relative;
-      overflow: hidden;
+      background: var(--surface); border: 1px solid var(--bd);
+      border-radius: var(--radius-md); padding: 15px 16px;
+      cursor: pointer; transition: all .18s var(--ease);
+      position: relative; overflow: hidden;
     }
-    .crate-card:hover {
-      border-color: var(--accent);
-      background: rgba(200,168,75,.04);
+    .crate-card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; background: var(--accent-bd); border-radius: 2px 0 0 2px;
+      transition: background .18s;
     }
-    .crate-card .cc-name {
-      font-size: 14px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 6px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .crate-card .cc-meta {
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--dim);
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .crate-card .cc-meta .hl { color: var(--accent); }
-    .crate-card .cc-grades {
-      display: flex;
-      gap: 4px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
+    .crate-card:hover { border-color: var(--accent-bd); transform: translateY(-2px); box-shadow: var(--sh-sm); }
+    .crate-card:hover::before { background: var(--accent); }
+    .cc-name { font-size: 13px; font-weight: 600; color: var(--txt); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cc-meta { font-size: 10px; font-family: var(--mono); color: var(--txt3); display: flex; gap: 10px; margin-bottom: 9px; }
+    .cc-meta .hl { color: var(--accent-lt); }
+    .cc-grades { display: flex; flex-wrap: wrap; gap: 4px; }
     .cc-gtag {
-      font-family: var(--mono);
-      font-size: 8px;
-      padding: 2px 6px;
-      border-radius: 2px;
+      font-size: 9px; font-family: var(--mono); padding: 2px 7px;
+      border-radius: 20px; border: 1px solid; font-weight: 500;
     }
+    .cc-hidden { display: none; }
 
-    /* ── Tabs for all/single view ── */
-    .view-tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
+    /* ══ DETAIL VIEW ══ */
+    .detail-view { animation: fadeUp .3s var(--ease); }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+    .detail-head { margin-bottom: 20px; }
+    .detail-eyebrow { font-size: 10px; font-family: var(--mono); color: var(--accent); letter-spacing: .15em; text-transform: uppercase; margin-bottom: 4px; }
+    .detail-title { font-size: 22px; font-weight: 700; color: var(--txt); letter-spacing: -.02em; line-height: 1.2; }
+
+    /* Stat cards */
+    .stat-cards { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--bd);
+      border-radius: var(--radius-md); padding: 13px 16px; flex: 1; min-width: 110px;
     }
-    .vtab {
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 6px 14px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--dim);
-      cursor: pointer;
-      transition: all .15s;
-      letter-spacing: .05em;
+    .sc-lbl { font-size: 9px; color: var(--txt3); font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; }
+    .sc-val { font-size: 21px; font-weight: 700; color: var(--txt); line-height: 1; }
+    .sc-val span { font-size: 11px; color: var(--txt3); font-weight: 400; margin-left: 2px; }
+
+    /* Grade summary chips — v1 style with total % */
+    .grade-sum-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+    .gs-chip {
+      display: flex; align-items: center; gap: 7px;
+      font-family: var(--mono); font-size: 11px;
+      padding: 6px 13px; border-radius: 20px; border: 1px solid;
+      cursor: pointer; transition: all .15s; font-weight: 500;
+      user-select: none;
     }
-    .vtab:hover { border-color: var(--accent); color: var(--accent); }
-    .vtab.active { border-color: var(--accent); background: rgba(200,168,75,.12); color: var(--accent); }
+    .gs-chip:hover { transform: translateY(-1px); box-shadow: var(--sh-sm); }
+    .gs-chip.selected { box-shadow: 0 0 0 2px var(--accent); }
+    .gs-chip.all { color: var(--txt2); background: var(--surface2); border-color: var(--bd2); }
+    .gs-chip.all.selected { color: var(--txt); }
+    .gs-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .gs-name { }
+    .gs-pct  { opacity: .75; }
+    .gs-cnt  { opacity: .5; font-size: 9px; }
 
-    /* ── Notice ── */
-    .notice {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--dim);
-      margin-top: 28px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-      line-height: 1.8;
+    /* Filter row */
+    .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-search {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface); border: 1px solid var(--bd);
+      border-radius: var(--radius-sm); padding: 8px 11px;
+      flex: 1; min-width: 160px; transition: border-color .2s;
     }
-    .notice b { color: var(--accent); }
+    .filter-search:focus-within { border-color: var(--accent); }
+    .filter-search svg { width: 12px; height: 12px; color: var(--txt3); flex-shrink: 0; }
+    .filter-search input {
+      background: none; border: none; outline: none;
+      font-family: var(--sans); font-size: 13px; color: var(--txt); width: 100%;
+    }
+    .filter-search input::placeholder { color: var(--txt3); }
+    .sort-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 8px 12px; background: var(--surface); border: 1px solid var(--bd);
+      border-radius: var(--radius-sm); font-family: var(--sans); font-size: 12px;
+      color: var(--txt2); cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .sort-btn:hover { border-color: var(--bd2); color: var(--txt); }
+    .sort-btn.active { border-color: var(--accent-bd); color: var(--accent-lt); background: var(--accent-bg); }
+    .sort-btn svg { width: 11px; height: 11px; }
 
-    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
-    @keyframes spin   { to { transform: rotate(360deg); } }
+    /* Table */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--bd);
+      border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--sh-sm);
+    }
+    .t-head {
+      display: grid;
+      grid-template-columns: 40px 1fr 84px 90px 150px 88px;
+      padding: 0 14px; border-bottom: 1px solid var(--bd);
+      background: var(--surface2);
+    }
+    .th {
+      font-size: 9px; font-family: var(--mono); color: var(--txt3);
+      letter-spacing: .1em; text-transform: uppercase; padding: 10px 7px;
+    }
+    .th.r { text-align: right; }
+    .t-row {
+      display: grid;
+      grid-template-columns: 40px 1fr 84px 90px 150px 88px;
+      padding: 0 14px; border-bottom: 1px solid var(--bd);
+      align-items: center; transition: background .12s;
+    }
+    .t-row:last-child { border-bottom: none; }
+    .t-row:hover { background: var(--surface2); }
+    .t-row.hidden { display: none; }
+    .td { padding: 9px 7px; }
+    .td-rank  { font-size: 11px; font-family: var(--mono); color: var(--txt3); }
+    .td-name  { font-size: 13px; color: var(--txt); font-weight: 500; }
+    .grade-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 9px; font-family: var(--mono); font-weight: 500;
+      padding: 3px 8px; border-radius: 20px; border: 1px solid; white-space: nowrap;
+    }
+    .grade-pill-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .td-prob    { text-align: right; }
+    .prob-num   { font-size: 14px; font-weight: 700; color: var(--txt); font-family: var(--mono); }
+    .prob-unit  { font-size: 10px; color: var(--txt3); margin-left: 1px; }
+    .bar-track  { height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+    .bar-fill   { height: 100%; border-radius: 3px; transition: width .5s var(--ease); }
+    .td-cumul   { text-align: right; font-size: 11px; font-family: var(--mono); color: var(--txt3); }
+    .t-empty {
+      padding: 36px; text-align: center;
+      font-size: 12px; color: var(--txt3); font-family: var(--mono); display: none;
+    }
+    .t-empty.show { display: block; }
 
-    @media (max-width: 600px) {
-      .td-bar { display: none; }
-      .td-cumul { display: none; }
+    /* ══ LOADING ══ */
+    .loading-overlay {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px; z-index: 9999; transition: opacity .4s;
+    }
+    .loading-overlay.hide { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 32px; height: 32px; border: 2.5px solid var(--bd2);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-txt { font-size: 12px; color: var(--txt2); font-family: var(--mono); }
+    .load-err {
+      position: fixed; inset: 0; background: var(--bg);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px; z-index: 9999;
+    }
+    .load-err.show { display: flex; }
+    .load-err-txt { font-size: 13px; color: var(--txt2); font-family: var(--mono); text-align: center; max-width: 300px; line-height: 1.7; }
+
+    /* ══ MOBILE ══ */
+    .sb-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 99;
+    }
+    @media (max-width: 780px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sb-overlay.show { display: block; }
+      .main { margin-left: 0; }
+      .mob-btn { display: flex; }
+      .t-head, .t-row { grid-template-columns: 34px 1fr 72px 80px; }
+      .th:nth-child(5), .td:nth-child(5),
+      .th:nth-child(6), .td:nth-child(6) { display: none; }
+      .content { padding: 14px; }
+      .crate-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
     }
   </style>
 </head>
 <body>
-<div class="container">
 
-  <!-- Header -->
-  <div class="top-header">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="52" height="52" style="flex-shrink:0;">
-      <path d="M 20 40 C 20 20, 80 20, 80 40 L 80 70 C 80 85, 20 85, 20 70 Z" fill="#2a2e33"/>
-      <path d="M 22 40 C 22 22, 78 22, 78 40 L 78 50 C 78 50, 50 60, 22 50 Z" fill="#3b424a"/>
-      <rect x="15" y="42" width="70" height="22" rx="4" fill="#586069"/>
-      <rect x="19" y="46" width="62" height="14" rx="2" fill="#0d1117"/>
-      <path d="M 22 64 L 78 64 L 70 82 C 60 88, 40 88, 30 82 Z" fill="#30363d"/>
-      <circle cx="85" cy="53" r="5" fill="#586069"/>
-      <circle cx="15" cy="53" r="5" fill="#586069"/>
-    </svg>
-    <div>
-      <div class="badge">PUBG MOBILE · PROBABILITY TABLE</div>
-      <h1>모배 확률표 뷰어</h1>
-      <div class="sub">CRATE DROP RATES · LIVE SHEET DATA</div>
-    </div>
-  </div>
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-txt">확률 데이터 불러오는 중...</div>
+</div>
+<div class="load-err" id="load-err">
+  <div style="font-size:28px">⚠</div>
+  <div class="load-err-txt">데이터를 불러오지 못했습니다.<br>인터넷 연결 또는 시트 공개 설정을 확인해주세요.</div>
+</div>
 
-  <!-- Loading -->
-  <div class="loading-bar" id="loading">
-    <div class="spinner"></div>
-    <span>확률 데이터 불러오는 중...</span>
-  </div>
-  <div class="load-err" id="load-err">⚠ 데이터를 불러오지 못했습니다. 인터넷 연결 또는 시트 공개 설정을 확인해주세요.</div>
+<div class="layout">
 
-  <!-- Main content (hidden until loaded) -->
-  <div id="main" style="display:none">
+  <div class="sb-overlay" id="sb-overlay" onclick="closeSB()"></div>
 
-    <!-- Freshness -->
-    <div class="freshness" id="freshness">
-      <span class="dot">●</span>
-      <span>PUBGM 확률표 연동 —</span>
-      <span class="cnt" id="crate-count">0</span>
-      <span>개 상자 로드됨</span>
-    </div>
-
-    <!-- View tabs -->
-    <div class="view-tabs">
-      <button class="vtab active" id="tab-all" onclick="switchTab('all')">전체 상자 목록</button>
-      <button class="vtab" id="tab-single" onclick="switchTab('single')">상자별 확률표</button>
-    </div>
-
-    <!-- ── ALL VIEW ── -->
-    <div id="all-view" class="show">
-      <!-- Search for all view -->
-      <div class="filter-bar" style="margin-bottom:16px">
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input type="text" id="all-search" placeholder="상자 이름 검색..." oninput="filterAllCards()">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="logo-row">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="6" width="18" height="12" rx="2"/>
+            <path d="M7 10h10M7 14h6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-name">확률표 뷰어</div>
         </div>
       </div>
-      <div class="all-grid" id="all-grid"></div>
+      <div class="logo-sub">PUBG MOBILE · CRATE RATES</div>
     </div>
 
-    <!-- ── SINGLE VIEW ── -->
-    <div id="single-view" style="display:none">
-      <!-- Crate selector -->
-      <div class="filter-bar">
-        <div class="crate-select-wrap" style="flex:1;margin-bottom:0">
-          <select id="crate-select" onchange="onCrateChange()">
-            <option value="">— 상자를 선택하세요 —</option>
-          </select>
-          <span class="crate-arrow">▼</span>
-        </div>
-      </div>
-
-      <!-- Search + Grade filter -->
-      <div class="filter-bar" id="item-filter-bar" style="display:none">
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input type="text" id="item-search" placeholder="아이템 검색..." oninput="filterTable()">
-        </div>
-        <div class="grade-filter" id="grade-filter"></div>
-      </div>
-
-      <!-- Crate panel -->
-      <div class="crate-panel" id="crate-panel">
-        <div class="cbl"></div><div class="cbr"></div>
-        <div class="crate-title" id="panel-title"></div>
-        <div class="crate-meta" id="panel-meta"></div>
-        <div class="grade-summary" id="grade-summary"></div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th class="center">#</th>
-                <th>아이템</th>
-                <th>등급</th>
-                <th class="right">확률</th>
-                <th>비율</th>
-                <th class="right">누적 확률</th>
-              </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-          </table>
-          <div class="empty-msg" id="empty-msg" style="display:none">검색 결과가 없습니다.</div>
-        </div>
+    <div class="sb-search">
+      <div class="sb-search-inner">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+        </svg>
+        <input type="text" id="sb-search-input" placeholder="상자 검색..." oninput="filterSidebar()">
       </div>
     </div>
 
-  </div><!-- /main -->
+    <!-- v1 뷰 전환 버튼 -->
+    <div class="sb-view-toggle">
+      <button class="svt active" id="svt-all"    onclick="switchView('all')">전체 목록</button>
+      <button class="svt"        id="svt-detail" onclick="switchView('detail')" id="svt-detail-btn">상자별</button>
+    </div>
 
-  <div class="notice">
-    <b>⚠ REFERENCE ONLY</b> — PUBG Mobile 공식 확률표 기반 데이터입니다. 실제 결과와 다를 수 있습니다.<br>
-    데이터는 구글 스프레드시트에서 실시간으로 불러옵니다.
+    <div class="sb-list" id="sb-list">
+      <div class="sb-section-lbl" id="sb-lbl">로딩 중...</div>
+    </div>
+
+    <div class="sb-foot">
+      <div class="sb-stats">
+        <div class="sbs-item"><div class="sbs-val" id="stat-crates">—</div><div class="sbs-lbl">CRATES</div></div>
+        <div class="sbs-item"><div class="sbs-val" id="stat-items">—</div><div class="sbs-lbl">ITEMS</div></div>
+        <div class="sbs-item"><div class="sbs-val" id="stat-grades">5</div><div class="sbs-lbl">GRADES</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-l">
+        <button class="icon-btn mob-btn" onclick="openSB()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18M3 6h18M3 18h18"/>
+          </svg>
+        </button>
+        <div class="breadcrumb" id="breadcrumb">
+          <span>전체 목록</span>
+        </div>
+      </div>
+      <div class="topbar-r">
+        <div class="live-badge" id="live-badge" style="display:none">
+          <div class="live-dot"></div>
+          <span id="live-count">0</span>개 로드됨
+        </div>
+        <button class="icon-btn" onclick="toggleTheme()" title="테마 전환">
+          <svg id="ico-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+          </svg>
+          <svg id="ico-light" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content" id="content"></div>
   </div>
 </div>
 
@@ -563,41 +487,34 @@
   const SHEET_ID = '1K2Q4loa65fnmIWM70UW4BA_bs894VUIBClE6gqUHOMU';
   const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=확률표`;
 
-  const GRADE_STYLE = {
-    '레드':  { bg:'rgba(220,60,60,.18)',   text:'#e07070', border:'rgba(220,60,60,.5)',   bar:'#e05050' },
-    '핑크':  { bg:'rgba(220,100,180,.18)', text:'#e090d0', border:'rgba(220,100,180,.5)', bar:'#e080c0' },
-    '퍼플':  { bg:'rgba(150,80,220,.18)',  text:'#b090e0', border:'rgba(150,80,220,.5)',  bar:'#a070d0' },
-    '블루':  { bg:'rgba(60,120,220,.18)',  text:'#70a0e0', border:'rgba(60,120,220,.5)',  bar:'#5090d0' },
-    '그린':  { bg:'rgba(60,180,100,.18)',  text:'#70c080', border:'rgba(60,180,100,.5)',  bar:'#50b070' },
+  const GS = {
+    '레드':  { color:'#f04e4e', bg:'rgba(240,78,78,.13)',  bd:'rgba(240,78,78,.3)'  },
+    '핑크':  { color:'#e060a8', bg:'rgba(224,96,168,.13)', bd:'rgba(224,96,168,.3)' },
+    '퍼플':  { color:'#9660dc', bg:'rgba(150,96,220,.13)', bd:'rgba(150,96,220,.3)' },
+    '블루':  { color:'#4488e8', bg:'rgba(68,136,232,.13)', bd:'rgba(68,136,232,.3)' },
+    '그린':  { color:'#38b870', bg:'rgba(56,184,112,.13)', bd:'rgba(56,184,112,.3)' },
   };
-  const GRADE_ORDER = ['레드','핑크','퍼플','블루','그린'];
+  const GO = ['레드','핑크','퍼플','블루','그린'];
 
-  let sheetData = {};
-  let orderedKeys = [];
+  let sheetData = {}, orderedKeys = [];
+  let currentView  = 'all';   // 'all' | 'detail'
   let currentCrate = null;
-  let activeGrade = 'ALL';
-  let maxProb = 0;
+  let activeGrade  = 'ALL';
+  let sortMode     = 'grade';
 
-  /* ── CSV 로드 ── */
+  /* ── CSV ── */
   async function loadSheet() {
     try {
-      const res = await fetch(CSV_URL);
-      if (!res.ok) throw new Error();
-      const text = await res.text();
-      parseSheet(text);
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('main').style.display    = 'block';
-      document.getElementById('freshness').classList.add('show');
-      document.getElementById('crate-count').textContent = orderedKeys.length;
-      populateCrates();
-      renderAllGrid();
+      const r = await fetch(CSV_URL);
+      if (!r.ok) throw new Error();
+      parseSheet(await r.text());
+      onLoaded();
     } catch(e) {
-      document.getElementById('loading').style.display = 'none';
+      document.getElementById('loading').classList.add('hide');
       document.getElementById('load-err').classList.add('show');
     }
   }
 
-  /* ── CSV → rows ── */
   function csvToRows(text) {
     const rows = [];
     for (const line of text.split('\n')) {
@@ -608,269 +525,347 @@
         if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; continue; }
         cur += ch;
       }
-      cols.push(cur.trim());
-      rows.push(cols);
+      cols.push(cur.trim()); rows.push(cols);
     }
     return rows;
   }
 
-  /* ── 파싱 (계산기와 동일 로직) ── */
   function parseSheet(text) {
     const rows = csvToRows(text);
     sheetData = {}; orderedKeys = [];
-    const sections = [];
-
+    const secs = [];
     for (let i = 0; i < rows.length; i++) {
-      const c0 = (rows[i][0] || '').toString().trim();
+      const c0 = (rows[i][0]||'').toString().trim();
       if (c0 === '아이템 명(KR)' || c0 === '아이템명(KR)' || c0.includes('아이템 명(KR)')) {
-        let nameRow = i - 1;
-        while (nameRow >= 0 && !(rows[nameRow][0] || '').toString().trim()) nameRow--;
-        const rawName = nameRow >= 0 ? (rows[nameRow][0] || '').toString() : '';
-        const crateName = rawName
-          .replace(/[■▣□◆◇●◎▷\[\]]/g, '')
-          .replace(/\s*\d{1,2}:\d{2}~?\s*$/, '')
-          .replace(/~\s*$/, '')
-          .replace(/\s+/g, ' ').trim();
-        if (crateName) sections.push({ crateName, headerRow: i, nameRow });
+        let nr = i - 1;
+        while (nr >= 0 && !(rows[nr][0]||'').toString().trim()) nr--;
+        const raw  = nr >= 0 ? (rows[nr][0]||'').toString() : '';
+        const name = raw.replace(/[■▣□◆◇●◎▷\[\]]/g,'').replace(/\s*\d{1,2}:\d{2}~?\s*$/,'').replace(/~\s*$/,'').replace(/\s+/g,' ').trim();
+        if (name) secs.push({ name, hi: i, nr });
       }
     }
-
-    for (let s = 0; s < sections.length; s++) {
-      const { crateName, headerRow, nameRow } = sections[s];
-      const endRow = s + 1 < sections.length ? sections[s+1].headerRow - 2 : rows.length;
-      const hdr = rows[headerRow].map(c => (c||'').toString().trim());
-      const gradeIdx = hdr.findIndex(h => h.includes('등급'));
-      const probIdx  = hdr.findIndex(h => h === '확률' || h.startsWith('확률'));
-
+    for (let s = 0; s < secs.length; s++) {
+      const { name, hi, nr } = secs[s];
+      const end = s+1 < secs.length ? secs[s+1].hi - 2 : rows.length;
+      const hdr = rows[hi].map(c=>(c||'').toString().trim());
+      const gi  = hdr.findIndex(h=>h.includes('등급'));
+      const pi  = hdr.findIndex(h=>h==='확률'||h.startsWith('확률'));
       const items = [];
-      for (let r = headerRow + 1; r < endRow; r++) {
+      for (let r = hi+1; r < end; r++) {
         const row = rows[r];
         const c0  = (row[0]||'').toString().trim();
-        if (!c0) continue;
-        if (c0 === '총합' || c0.startsWith('*') || /^\d+\./.test(c0)) continue;
-        const grade = gradeIdx !== -1 ? (row[gradeIdx]||'').toString().trim() : '';
-        let probNum = probIdx !== -1 ? parseFloat((row[probIdx]||'').toString().replace('%','')) : NaN;
-        if (isNaN(probNum) || probNum <= 0) {
-          for (let ci = 2; ci < row.length; ci++) {
-            const n = parseFloat((row[ci]||'').toString().replace('%',''));
-            if (!isNaN(n) && n > 0 && n < 100) { probNum = n; break; }
+        if (!c0 || c0==='총합' || c0.startsWith('*') || /^\d+\./.test(c0)) continue;
+        const grade = gi !== -1 ? (row[gi]||'').toString().trim() : '';
+        let prob = pi !== -1 ? parseFloat((row[pi]||'').toString().replace('%','')) : NaN;
+        if (isNaN(prob)||prob<=0) {
+          for (let ci=2;ci<row.length;ci++) {
+            const n=parseFloat((row[ci]||'').toString().replace('%',''));
+            if(!isNaN(n)&&n>0&&n<100){prob=n;break;}
           }
         }
-        if (isNaN(probNum) || probNum <= 0 || probNum >= 100) continue;
-        items.push({ item: c0, grade, prob: probNum });
+        if (isNaN(prob)||prob<=0||prob>=100) continue;
+        items.push({ item: c0, grade, prob });
       }
-      if (items.length === 0) continue;
-
-      let key = crateName;
+      if (!items.length) continue;
+      let key = name;
       if (sheetData[key]) {
-        const bCell = (rows[nameRow] ? (rows[nameRow][1]||rows[nameRow][2]||'') : '').toString();
-        const dateM = bCell.match(/\d{4}-\d{2}-\d{2}/)||bCell.match(/\d{2,4}[.\-]\d{1,2}[.\-]\d{1,2}/);
-        key = dateM ? `${crateName} (${dateM[0]})` : `${crateName} (${orderedKeys.filter(k=>k===crateName||k.startsWith(crateName+' (')).length+1})`;
+        const bc=(rows[nr]?(rows[nr][1]||rows[nr][2]||''):'').toString();
+        const dm=bc.match(/\d{4}-\d{2}-\d{2}/)||bc.match(/\d{2,4}[.\-]\d{1,2}[.\-]\d{1,2}/);
+        key=dm?`${name} (${dm[0]})`:`${name} (${orderedKeys.filter(k=>k===name||k.startsWith(name+' (')).length+1})`;
       }
-      sheetData[key] = items;
-      orderedKeys.push(key);
+      sheetData[key]=items; orderedKeys.push(key);
     }
     orderedKeys.reverse();
   }
 
-  /* ── 상자 드롭다운 ── */
-  function populateCrates() {
-    const sel = document.getElementById('crate-select');
-    sel.innerHTML = '<option value="">— 상자를 선택하세요 —</option>';
-    for (const k of orderedKeys) {
-      const opt = document.createElement('option');
-      opt.value = opt.textContent = k;
-      sel.appendChild(opt);
+  function onLoaded() {
+    document.getElementById('loading').classList.add('hide');
+    const totalItems = orderedKeys.reduce((s,k)=>s+sheetData[k].length,0);
+    document.getElementById('stat-crates').textContent = orderedKeys.length;
+    document.getElementById('stat-items').textContent  = totalItems;
+    document.getElementById('live-count').textContent  = orderedKeys.length;
+    document.getElementById('live-badge').style.display = 'flex';
+    renderSidebar(orderedKeys);
+    renderAllView();
+  }
+
+  /* ── SIDEBAR ── */
+  function renderSidebar(keys) {
+    const list = document.getElementById('sb-list');
+    list.querySelectorAll('.crate-item').forEach(e=>e.remove());
+    document.getElementById('sb-lbl').textContent = `${keys.length}개 상자`;
+    for (const key of keys) {
+      const items = sheetData[key]||[];
+      const d = document.createElement('div');
+      d.className = 'crate-item';
+      d.dataset.key  = key;
+      d.dataset.name = key.toLowerCase();
+      d.innerHTML = `<div class="ci-name">${key}</div><div class="ci-count">${items.length}</div>`;
+      d.onclick = () => { selectCrate(key); closeSB(); };
+      list.appendChild(d);
     }
   }
 
-  /* ── 전체 카드 뷰 ── */
-  function renderAllGrid() {
-    const grid = document.getElementById('all-grid');
-    grid.innerHTML = '';
-    for (const key of orderedKeys) {
-      const items = sheetData[key] || [];
+  function filterSidebar() {
+    const q = document.getElementById('sb-search-input').value.toLowerCase();
+    let vis = 0;
+    document.querySelectorAll('.crate-item').forEach(el => {
+      const show = !q || el.dataset.name.includes(q);
+      el.style.display = show ? '' : 'none';
+      if (show) vis++;
+    });
+    document.getElementById('sb-lbl').textContent = `${vis}개 상자`;
+  }
+
+  /* ── VIEW SWITCH ── */
+  function switchView(v) {
+    currentView = v;
+    document.getElementById('svt-all').classList.toggle('active',    v==='all');
+    document.getElementById('svt-detail').classList.toggle('active', v==='detail');
+    if (v === 'all') {
+      renderAllView();
+    } else {
+      if (currentCrate) renderDetailView(currentCrate);
+      else showPickPrompt();
+    }
+  }
+
+  /* ── ALL VIEW (v1 card grid) ── */
+  function renderAllView() {
+    currentView = 'all';
+    document.getElementById('svt-all').classList.add('active');
+    document.getElementById('svt-detail').classList.remove('active');
+    document.querySelectorAll('.crate-item').forEach(el=>el.classList.remove('active'));
+    document.getElementById('breadcrumb').innerHTML = `<span class="cur">전체 목록</span>`;
+
+    const cards = orderedKeys.map(key => {
+      const items = sheetData[key]||[];
       const gradeSum = {};
       let total = 0;
-      for (const {grade, prob} of items) {
-        if (grade) gradeSum[grade] = (gradeSum[grade]||0) + prob;
+      for (const {grade,prob} of items) {
+        if (grade) gradeSum[grade]=(gradeSum[grade]||0)+prob;
         total += prob;
       }
-
-      const card = document.createElement('div');
-      card.className = 'crate-card';
-      card.dataset.name = key.toLowerCase();
-
-      const sortedGrades = Object.keys(gradeSum).sort((a,b)=>{
-        const ai=GRADE_ORDER.indexOf(a); const bi=GRADE_ORDER.indexOf(b);
+      const sortedG = Object.keys(gradeSum).sort((a,b)=>{
+        const ai=GO.indexOf(a),bi=GO.indexOf(b);
         return (ai===-1?99:ai)-(bi===-1?99:bi);
       });
+      const tags = sortedG.map(g=>{
+        const gs=GS[g]||{color:'#888',bg:'rgba(128,128,128,.12)',bd:'rgba(128,128,128,.3)'};
+        const pct=Math.round(gradeSum[g]*100)/100;
+        return `<span class="cc-gtag" style="color:${gs.color};background:${gs.bg};border-color:${gs.bd}">${g} ${pct}%</span>`;
+      }).join('');
 
-      let gradeTags = '';
-      for (const g of sortedGrades) {
-        const gs = GRADE_STYLE[g]||{bg:'rgba(100,100,100,.2)',text:'#aaa'};
-        const pct = Math.round(gradeSum[g]*100)/100;
-        gradeTags += `<span class="cc-gtag" style="background:${gs.bg};color:${gs.text}">${g} ${pct}%</span>`;
-      }
-
-      card.innerHTML = `
+      const safeKey = key.replace(/'/g,"\\'");
+      return `<div class="crate-card" onclick="selectCrate('${safeKey}')">
         <div class="cc-name">${key}</div>
-        <div class="cc-meta">
-          <span>아이템 <span class="hl">${items.length}</span>종</span>
-          <span>합계 <span class="hl">${Math.round(total*100)/100}%</span></span>
+        <div class="cc-meta"><span>아이템 <span class="hl">${items.length}종</span></span><span>합계 <span class="hl">${Math.round(total*100)/100}%</span></span></div>
+        <div class="cc-grades">${tags}</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="all-view">
+        <div class="view-header">
+          <div class="view-title">전체 상자 목록</div>
+          <div class="view-sub">${orderedKeys.length}개 상자 · 시트 실시간 연동</div>
         </div>
-        <div class="cc-grades">${gradeTags}</div>`;
-      card.onclick = () => { switchTab('single'); selectCrate(key); };
-      grid.appendChild(card);
-    }
+        <div class="crate-grid" id="all-grid">${cards}</div>
+      </div>`;
   }
 
-  function filterAllCards() {
-    const q = document.getElementById('all-search').value.toLowerCase();
-    document.querySelectorAll('.crate-card').forEach(c => {
-      c.style.display = c.dataset.name.includes(q) ? '' : 'none';
-    });
+  function showPickPrompt() {
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:50vh;flex-direction:column;gap:12px">
+        <div style="width:52px;height:52px;background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6">
+            <rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10M7 14h6"/>
+          </svg>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:var(--txt)">상자를 선택하세요</div>
+        <div style="font-size:12px;color:var(--txt3);font-family:var(--mono)">좌측 목록에서 상자를 클릭하거나 전체 목록 탭을 이용하세요</div>
+      </div>`;
   }
 
-  /* ── 탭 전환 ── */
-  function switchTab(tab) {
-    document.getElementById('tab-all').classList.toggle('active', tab==='all');
-    document.getElementById('tab-single').classList.toggle('active', tab==='single');
-    document.getElementById('all-view').style.display    = tab==='all'    ? 'block' : 'none';
-    document.getElementById('single-view').style.display = tab==='single' ? 'block' : 'none';
-    if (tab==='all') { document.getElementById('all-view').classList.add('show'); }
-  }
-
-  /* ── 상자 선택 (드롭다운) ── */
-  function onCrateChange() {
-    const val = document.getElementById('crate-select').value;
-    if (!val) return;
-    selectCrate(val);
-  }
-
+  /* ── SELECT CRATE ── */
   function selectCrate(key) {
-    document.getElementById('crate-select').value = key;
     currentCrate = key;
-    activeGrade = 'ALL';
+    activeGrade  = 'ALL';
+    sortMode     = 'grade';
+    document.querySelectorAll('.crate-item').forEach(el=>el.classList.toggle('active', el.dataset.key===key));
+    currentView = 'detail';
+    document.getElementById('svt-all').classList.remove('active');
+    document.getElementById('svt-detail').classList.add('active');
+    renderDetailView(key);
+  }
 
-    const items = sheetData[key] || [];
-    maxProb = Math.max(...items.map(i=>i.prob));
+  /* ── DETAIL VIEW (v2 UI) ── */
+  function renderDetailView(key) {
+    const items = sheetData[key]||[];
+    const gradeSum = {}, gradeCnt = {};
+    let total = 0;
+    for (const {grade,prob} of items) {
+      if (grade) { gradeSum[grade]=(gradeSum[grade]||0)+prob; gradeCnt[grade]=(gradeCnt[grade]||0)+1; }
+      total += prob;
+    }
+    const sortedG = Object.keys(gradeSum).sort((a,b)=>{
+      const ai=GO.indexOf(a),bi=GO.indexOf(b);
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
 
-    // Sort: grade order → prob asc
-    const sorted = [...items].sort((a,b)=>{
-      const ai=GRADE_ORDER.indexOf(a.grade); const bi=GRADE_ORDER.indexOf(b.grade);
+    // grade summary chips — v1 style (total % + count)
+    const allChip = `<button class="gs-chip all selected" id="gsc-ALL" onclick="setGrade('ALL')">
+      <span class="gs-dot" style="background:var(--txt3)"></span>
+      <span class="gs-name">ALL</span>
+    </button>`;
+    const gradeChips = sortedG.map(g => {
+      const gs  = GS[g]||{color:'#888',bg:'rgba(128,128,128,.12)',bd:'rgba(128,128,128,.3)'};
+      const pct = Math.round(gradeSum[g]*1000)/1000;
+      const cnt = gradeCnt[g]||0;
+      return `<button class="gs-chip" id="gsc-${g}"
+        style="color:${gs.color};background:${gs.bg};border-color:${gs.bd}"
+        onclick="setGrade('${g}')">
+        <span class="gs-dot" style="background:${gs.color}"></span>
+        <span class="gs-name">${g}</span>
+        <span class="gs-pct">${pct}%</span>
+        <span class="gs-cnt">${cnt}종</span>
+      </button>`;
+    }).join('');
+
+    document.getElementById('breadcrumb').innerHTML =
+      `<span style="color:var(--txt3);cursor:pointer" onclick="renderAllView()">전체 목록</span>
+       <span class="sep">›</span>
+       <span class="cur">${key}</span>`;
+
+    document.getElementById('content').innerHTML = `
+      <div class="detail-view">
+        <div class="detail-head">
+          <div class="detail-eyebrow">CRATE DROP RATES</div>
+          <div class="detail-title">${key}</div>
+        </div>
+
+        <div class="stat-cards">
+          <div class="stat-card"><div class="sc-lbl">아이템</div><div class="sc-val">${items.length}<span>종</span></div></div>
+          <div class="stat-card"><div class="sc-lbl">등급</div><div class="sc-val">${sortedG.length}<span>종류</span></div></div>
+          <div class="stat-card"><div class="sc-lbl">확률 합계</div><div class="sc-val">${Math.round(total*100)/100}<span>%</span></div></div>
+          <div class="stat-card"><div class="sc-lbl">최저 확률</div><div class="sc-val">${Math.min(...items.map(i=>i.prob)).toFixed(2)}<span>%</span></div></div>
+        </div>
+
+        <div class="grade-sum-row">${allChip}${gradeChips}</div>
+
+        <div class="filter-row">
+          <div class="filter-search">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+            </svg>
+            <input type="text" placeholder="아이템 이름 검색..." oninput="filterTable()">
+          </div>
+          <button class="sort-btn active" id="sort-grade" onclick="setSort('grade')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+            등급순
+          </button>
+          <button class="sort-btn" id="sort-prob" onclick="setSort('prob')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"/></svg>
+            확률순
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <div class="t-head">
+            <div class="th">#</div>
+            <div class="th">아이템</div>
+            <div class="th">등급</div>
+            <div class="th r">확률</div>
+            <div class="th">비율</div>
+            <div class="th r">누적</div>
+          </div>
+          <div id="t-body"></div>
+          <div class="t-empty" id="t-empty">검색 결과 없음</div>
+        </div>
+      </div>`;
+
+    renderTable(items);
+  }
+
+  function getSorted(items) {
+    return [...items].sort((a,b) => {
+      if (sortMode === 'prob') return b.prob - a.prob;
+      const ai=GO.indexOf(a.grade), bi=GO.indexOf(b.grade);
       if (ai===bi) return a.prob-b.prob;
       return (ai===-1?99:ai)-(bi===-1?99:bi);
     });
-
-    // Panel meta
-    let totalProb = items.reduce((s,i)=>s+i.prob, 0);
-    const gradeSum = {};
-    for (const {grade,prob} of items) { if(grade) gradeSum[grade]=(gradeSum[grade]||0)+prob; }
-
-    document.getElementById('panel-title').textContent = key;
-    document.getElementById('panel-meta').innerHTML =
-      `<span>아이템 <span class="hl">${items.length}종</span></span>` +
-      `<span>총합 <span class="hl">${Math.round(totalProb*100)/100}%</span></span>`;
-
-    // Grade summary chips
-    const gsum = document.getElementById('grade-summary');
-    gsum.innerHTML = '';
-    const sortedGrades = Object.keys(gradeSum).sort((a,b)=>{
-      const ai=GRADE_ORDER.indexOf(a); const bi=GRADE_ORDER.indexOf(b);
-      return (ai===-1?99:ai)-(bi===-1?99:bi);
-    });
-    for (const g of sortedGrades) {
-      const gs = GRADE_STYLE[g]||{bg:'rgba(100,100,100,.2)',text:'#aaa',border:'rgba(100,100,100,.3)'};
-      const pct = Math.round(gradeSum[g]*1000)/1000;
-      const cnt = items.filter(i=>i.grade===g).length;
-      const chip = document.createElement('div');
-      chip.className = 'gs-chip';
-      chip.style.cssText=`background:${gs.bg};color:${gs.text};border:1px solid ${gs.border}`;
-      chip.innerHTML=`<span class="gname">${g}</span><span class="gpct">${pct}%</span><span class="gcnt">${cnt}종</span>`;
-      gsum.appendChild(chip);
-    }
-
-    // Grade filter chips
-    const gf = document.getElementById('grade-filter');
-    gf.innerHTML = '';
-    const allBtn = document.createElement('button');
-    allBtn.className='gf-chip active'; allBtn.textContent='ALL';
-    allBtn.onclick=()=>setGradeFilter('ALL');
-    gf.appendChild(allBtn);
-    for (const g of sortedGrades) {
-      const gs = GRADE_STYLE[g]||{text:'#aaa'};
-      const btn = document.createElement('button');
-      btn.className='gf-chip'; btn.textContent=g;
-      btn.style.color=gs.text;
-      btn.dataset.grade=g;
-      btn.onclick=()=>setGradeFilter(g);
-      gf.appendChild(btn);
-    }
-
-    // Table
-    renderTable(sorted);
-
-    document.getElementById('crate-panel').classList.add('show');
-    document.getElementById('item-filter-bar').style.display='flex';
-    document.getElementById('item-search').value='';
-  }
-
-  function setGradeFilter(grade) {
-    activeGrade = grade;
-    document.querySelectorAll('#grade-filter .gf-chip').forEach(c=>{
-      c.classList.toggle('active',
-        grade==='ALL' ? c.textContent==='ALL' : c.dataset.grade===grade);
-    });
-    filterTable();
   }
 
   function renderTable(items) {
-    const tbody = document.getElementById('table-body');
+    const sorted  = getSorted(items);
+    const maxProb = Math.max(...items.map(i=>i.prob));
+    const tbody   = document.getElementById('t-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
     let cumul = 0;
-    const sorted = [...items].sort((a,b)=>{
-      const ai=GRADE_ORDER.indexOf(a.grade); const bi=GRADE_ORDER.indexOf(b.grade);
-      if(ai===bi) return a.prob-b.prob;
-      return (ai===-1?99:ai)-(bi===-1?99:bi);
-    });
-
-    sorted.forEach((item, idx)=>{
+    sorted.forEach((item, idx) => {
       cumul += item.prob;
-      const gs = GRADE_STYLE[item.grade];
-      const barPct = maxProb > 0 ? (item.prob/maxProb*100).toFixed(1) : 0;
-      const barColor = gs ? gs.bar : '#5a6a7a';
-      const gradeBadge = item.grade && gs
-        ? `<span class="grade-tag" style="background:${gs.bg};color:${gs.text}">${item.grade}</span>`
-        : (item.grade ? `<span class="grade-tag" style="background:rgba(100,100,100,.2);color:#aaa">${item.grade}</span>` : '');
-      const tr = document.createElement('tr');
+      const gs  = GS[item.grade];
+      const pct = maxProb > 0 ? (item.prob/maxProb*100).toFixed(1) : 0;
+      const barColor = gs ? gs.color : '#5a6a7a';
+      const pill = item.grade
+        ? `<span class="grade-pill" style="color:${gs?.color||'#888'};background:${gs?.bg||'rgba(128,128,128,.12)'};border-color:${gs?.bd||'rgba(128,128,128,.3)'}">
+             <span class="grade-pill-dot" style="background:${gs?.color||'#888'}"></span>${item.grade}
+           </span>` : '';
+      const tr = document.createElement('div');
+      tr.className = 't-row';
       tr.dataset.grade = item.grade;
       tr.dataset.item  = item.item.toLowerCase();
       tr.innerHTML = `
-        <td class="td-rank">${idx+1}</td>
-        <td class="td-item">${item.item}</td>
-        <td class="td-grade">${gradeBadge}</td>
-        <td class="td-prob"><span class="prob-val">${item.prob}%</span></td>
-        <td class="td-bar">
-          <div class="bar-bg"><div class="bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
-        </td>
-        <td class="td-cumul">${Math.round(cumul*1000)/1000}%</td>`;
+        <div class="td td-rank">${idx+1}</div>
+        <div class="td td-name">${item.item}</div>
+        <div class="td">${pill}</div>
+        <div class="td td-prob"><span class="prob-num">${item.prob}</span><span class="prob-unit">%</span></div>
+        <div class="td"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barColor}"></div></div></div>
+        <div class="td td-cumul">${Math.round(cumul*1000)/1000}%</div>`;
       tbody.appendChild(tr);
     });
   }
 
-  function filterTable() {
-    const q = document.getElementById('item-search').value.toLowerCase();
-    let visible = 0;
-    document.querySelectorAll('#table-body tr').forEach(tr=>{
-      const gradeOk = activeGrade==='ALL' || tr.dataset.grade===activeGrade;
-      const searchOk= !q || tr.dataset.item.includes(q);
-      const show = gradeOk && searchOk;
-      tr.classList.toggle('hidden-row', !show);
-      if(show) visible++;
-    });
-    document.getElementById('empty-msg').style.display = visible===0?'block':'none';
+  function setGrade(g) {
+    activeGrade = g;
+    document.querySelectorAll('.gs-chip').forEach(el=>el.classList.remove('selected'));
+    document.getElementById('gsc-'+g)?.classList.add('selected');
+    filterTable();
   }
+
+  function setSort(mode) {
+    sortMode = mode;
+    document.getElementById('sort-grade')?.classList.toggle('active', mode==='grade');
+    document.getElementById('sort-prob')?.classList.toggle('active',  mode==='prob');
+    if (currentCrate) renderTable(sheetData[currentCrate]||[]);
+    filterTable();
+  }
+
+  function filterTable() {
+    const q = (document.querySelector('.filter-search input')?.value||'').toLowerCase();
+    let vis = 0;
+    document.querySelectorAll('#t-body .t-row').forEach(tr => {
+      const ok = (activeGrade==='ALL'||tr.dataset.grade===activeGrade) && (!q||tr.dataset.item.includes(q));
+      tr.classList.toggle('hidden', !ok);
+      if (ok) vis++;
+    });
+    const empty = document.getElementById('t-empty');
+    if (empty) empty.classList.toggle('show', vis===0);
+  }
+
+  /* ── THEME ── */
+  let dark = true;
+  function toggleTheme() {
+    dark = !dark;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('ico-dark').style.display  = dark ? '' : 'none';
+    document.getElementById('ico-light').style.display = dark ? 'none' : '';
+  }
+
+  /* ── MOBILE ── */
+  function openSB()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sb-overlay').classList.add('show'); }
+  function closeSB() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sb-overlay').classList.remove('show'); }
 
   loadSheet();
 </script>
