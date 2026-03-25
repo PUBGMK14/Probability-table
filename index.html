@@ -1,1 +1,878 @@
-# Probability-table
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모배 확률표 뷰어</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #0a0c0f;
+      --panel:   #0f1318;
+      --border:  #2a3540;
+      --accent:  #c8a84b;
+      --accent2: #4b8fc8;
+      --text:    #d4dde6;
+      --dim:     #5a6a7a;
+      --danger:  #c84b4b;
+      --green:   #4bc87a;
+      --red:     #e05c5c;
+      --mono:    'Share Tech Mono', monospace;
+      --sans:    'Rajdhani', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 28px 16px 60px;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(200,168,75,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,168,75,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* ── TOP HEADER ── */
+    .top-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .badge { font-family: var(--mono); font-size: 10px; letter-spacing: .15em; color: var(--accent); margin-bottom: 4px; }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: .05em; color: #fff; line-height: 1.1; }
+    .sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 3px; }
+
+    /* ── Loading / Error ── */
+    .loading-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      padding: 40px 0;
+      justify-content: center;
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .load-err {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--danger);
+      padding: 16px 18px;
+      border: 1px solid rgba(200,75,75,.3);
+      border-left: 3px solid var(--danger);
+      background: rgba(200,75,75,.05);
+      display: none;
+    }
+    .load-err.show { display: block; }
+
+    /* ── Freshness bar ── */
+    .freshness {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--dim);
+      margin-bottom: 20px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .freshness.show { display: flex; flex-wrap: wrap; }
+    .freshness .dot { color: var(--green); }
+    .freshness .cnt { color: var(--accent); }
+
+    /* ── Search + Filter bar ── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+    }
+    .search-wrap input {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 9px 12px 9px 34px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--dim); }
+    .search-icon {
+      position: absolute;
+      left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--dim);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .grade-filter {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .gf-chip {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      transition: all .15s;
+      letter-spacing: .05em;
+    }
+    .gf-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .gf-chip.active { border-color: var(--accent); background: rgba(200,168,75,.12); color: var(--accent); }
+
+    /* ── Crate selector ── */
+    .crate-select-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .crate-select-wrap select {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 11px 36px 11px 12px;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .crate-select-wrap select:focus { border-color: var(--accent); }
+    .crate-select-wrap select option { background: #141a22; }
+    .crate-arrow {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+      pointer-events: none;
+      font-size: 10px;
+    }
+
+    /* ── Crate panel ── */
+    .crate-panel {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 22px 20px 18px;
+      margin-bottom: 28px;
+      display: none;
+      animation: fadeIn .35s ease;
+    }
+    .crate-panel.show { display: block; }
+    .crate-panel::before, .crate-panel::after,
+    .crate-panel .cbl, .crate-panel .cbr {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+    .crate-panel::before { top:-1px;    left:-1px;   border-width: 2px 0 0 2px; }
+    .crate-panel::after  { top:-1px;    right:-1px;  border-width: 2px 2px 0 0; }
+    .crate-panel .cbl    { bottom:-1px; left:-1px;   border-width: 0 0 2px 2px; }
+    .crate-panel .cbr    { bottom:-1px; right:-1px;  border-width: 0 2px 2px 0; }
+
+    .crate-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: .04em;
+      margin-bottom: 6px;
+    }
+    .crate-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--dim);
+      margin-bottom: 16px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .crate-meta span { display: flex; align-items: center; gap: 4px; }
+    .crate-meta .hl { color: var(--accent); }
+
+    /* ── Grade summary chips ── */
+    .grade-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .gs-chip {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gs-chip .gname { font-weight: 700; }
+    .gs-chip .gpct  { opacity: .85; }
+    .gs-chip .gcnt  { opacity: .6; font-size: 9px; }
+
+    /* ── Table ── */
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    thead th {
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 9px;
+      letter-spacing: .12em;
+      color: var(--dim);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th.right { text-align: right; }
+    thead th.center { text-align: center; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(42,53,64,.6);
+      transition: background .12s;
+    }
+    tbody tr:hover { background: rgba(200,168,75,.04); }
+    tbody tr.hidden-row { display: none; }
+
+    tbody td {
+      padding: 9px 12px;
+      vertical-align: middle;
+    }
+    .td-rank {
+      color: var(--dim);
+      font-size: 10px;
+      width: 36px;
+    }
+    .td-item {
+      color: var(--text);
+      font-size: 12px;
+      min-width: 120px;
+    }
+    .td-grade {
+      width: 70px;
+    }
+    .grade-tag {
+      display: inline-block;
+      font-size: 9px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .td-prob {
+      text-align: right;
+      min-width: 70px;
+    }
+    .prob-val { color: #fff; font-size: 13px; }
+
+    .td-bar {
+      width: 140px;
+      padding-right: 18px;
+    }
+    .bar-bg {
+      background: rgba(255,255,255,.06);
+      border-radius: 2px;
+      height: 6px;
+      overflow: hidden;
+      min-width: 60px;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width .4s ease;
+    }
+
+    .td-cumul {
+      text-align: right;
+      color: var(--dim);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    /* ── Empty ── */
+    .empty-msg {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dim);
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    /* ── All craters grid (initial view) ── */
+    #all-view {
+      display: none;
+    }
+    #all-view.show { display: block; }
+
+    .all-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+    .crate-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .crate-card:hover {
+      border-color: var(--accent);
+      background: rgba(200,168,75,.04);
+    }
+    .crate-card .cc-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .crate-card .cc-meta {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--dim);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .crate-card .cc-meta .hl { color: var(--accent); }
+    .crate-card .cc-grades {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .cc-gtag {
+      font-family: var(--mono);
+      font-size: 8px;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    /* ── Tabs for all/single view ── */
+    .view-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .vtab {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      transition: all .15s;
+      letter-spacing: .05em;
+    }
+    .vtab:hover { border-color: var(--accent); color: var(--accent); }
+    .vtab.active { border-color: var(--accent); background: rgba(200,168,75,.12); color: var(--accent); }
+
+    /* ── Notice ── */
+    .notice {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      line-height: 1.8;
+    }
+    .notice b { color: var(--accent); }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    @keyframes spin   { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .td-bar { display: none; }
+      .td-cumul { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="top-header">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="52" height="52" style="flex-shrink:0;">
+      <path d="M 20 40 C 20 20, 80 20, 80 40 L 80 70 C 80 85, 20 85, 20 70 Z" fill="#2a2e33"/>
+      <path d="M 22 40 C 22 22, 78 22, 78 40 L 78 50 C 78 50, 50 60, 22 50 Z" fill="#3b424a"/>
+      <rect x="15" y="42" width="70" height="22" rx="4" fill="#586069"/>
+      <rect x="19" y="46" width="62" height="14" rx="2" fill="#0d1117"/>
+      <path d="M 22 64 L 78 64 L 70 82 C 60 88, 40 88, 30 82 Z" fill="#30363d"/>
+      <circle cx="85" cy="53" r="5" fill="#586069"/>
+      <circle cx="15" cy="53" r="5" fill="#586069"/>
+    </svg>
+    <div>
+      <div class="badge">PUBG MOBILE · PROBABILITY TABLE</div>
+      <h1>모배 확률표 뷰어</h1>
+      <div class="sub">CRATE DROP RATES · LIVE SHEET DATA</div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-bar" id="loading">
+    <div class="spinner"></div>
+    <span>확률 데이터 불러오는 중...</span>
+  </div>
+  <div class="load-err" id="load-err">⚠ 데이터를 불러오지 못했습니다. 인터넷 연결 또는 시트 공개 설정을 확인해주세요.</div>
+
+  <!-- Main content (hidden until loaded) -->
+  <div id="main" style="display:none">
+
+    <!-- Freshness -->
+    <div class="freshness" id="freshness">
+      <span class="dot">●</span>
+      <span>PUBGM 확률표 연동 —</span>
+      <span class="cnt" id="crate-count">0</span>
+      <span>개 상자 로드됨</span>
+    </div>
+
+    <!-- View tabs -->
+    <div class="view-tabs">
+      <button class="vtab active" id="tab-all" onclick="switchTab('all')">전체 상자 목록</button>
+      <button class="vtab" id="tab-single" onclick="switchTab('single')">상자별 확률표</button>
+    </div>
+
+    <!-- ── ALL VIEW ── -->
+    <div id="all-view" class="show">
+      <!-- Search for all view -->
+      <div class="filter-bar" style="margin-bottom:16px">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="all-search" placeholder="상자 이름 검색..." oninput="filterAllCards()">
+        </div>
+      </div>
+      <div class="all-grid" id="all-grid"></div>
+    </div>
+
+    <!-- ── SINGLE VIEW ── -->
+    <div id="single-view" style="display:none">
+      <!-- Crate selector -->
+      <div class="filter-bar">
+        <div class="crate-select-wrap" style="flex:1;margin-bottom:0">
+          <select id="crate-select" onchange="onCrateChange()">
+            <option value="">— 상자를 선택하세요 —</option>
+          </select>
+          <span class="crate-arrow">▼</span>
+        </div>
+      </div>
+
+      <!-- Search + Grade filter -->
+      <div class="filter-bar" id="item-filter-bar" style="display:none">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="item-search" placeholder="아이템 검색..." oninput="filterTable()">
+        </div>
+        <div class="grade-filter" id="grade-filter"></div>
+      </div>
+
+      <!-- Crate panel -->
+      <div class="crate-panel" id="crate-panel">
+        <div class="cbl"></div><div class="cbr"></div>
+        <div class="crate-title" id="panel-title"></div>
+        <div class="crate-meta" id="panel-meta"></div>
+        <div class="grade-summary" id="grade-summary"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="center">#</th>
+                <th>아이템</th>
+                <th>등급</th>
+                <th class="right">확률</th>
+                <th>비율</th>
+                <th class="right">누적 확률</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+          <div class="empty-msg" id="empty-msg" style="display:none">검색 결과가 없습니다.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <div class="notice">
+    <b>⚠ REFERENCE ONLY</b> — PUBG Mobile 공식 확률표 기반 데이터입니다. 실제 결과와 다를 수 있습니다.<br>
+    데이터는 구글 스프레드시트에서 실시간으로 불러옵니다.
+  </div>
+</div>
+
+<script>
+  const SHEET_ID = '1K2Q4loa65fnmIWM70UW4BA_bs894VUIBClE6gqUHOMU';
+  const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=확률표`;
+
+  const GRADE_STYLE = {
+    '레드':  { bg:'rgba(220,60,60,.18)',   text:'#e07070', border:'rgba(220,60,60,.5)',   bar:'#e05050' },
+    '핑크':  { bg:'rgba(220,100,180,.18)', text:'#e090d0', border:'rgba(220,100,180,.5)', bar:'#e080c0' },
+    '퍼플':  { bg:'rgba(150,80,220,.18)',  text:'#b090e0', border:'rgba(150,80,220,.5)',  bar:'#a070d0' },
+    '블루':  { bg:'rgba(60,120,220,.18)',  text:'#70a0e0', border:'rgba(60,120,220,.5)',  bar:'#5090d0' },
+    '그린':  { bg:'rgba(60,180,100,.18)',  text:'#70c080', border:'rgba(60,180,100,.5)',  bar:'#50b070' },
+  };
+  const GRADE_ORDER = ['레드','핑크','퍼플','블루','그린'];
+
+  let sheetData = {};
+  let orderedKeys = [];
+  let currentCrate = null;
+  let activeGrade = 'ALL';
+  let maxProb = 0;
+
+  /* ── CSV 로드 ── */
+  async function loadSheet() {
+    try {
+      const res = await fetch(CSV_URL);
+      if (!res.ok) throw new Error();
+      const text = await res.text();
+      parseSheet(text);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('main').style.display    = 'block';
+      document.getElementById('freshness').classList.add('show');
+      document.getElementById('crate-count').textContent = orderedKeys.length;
+      populateCrates();
+      renderAllGrid();
+    } catch(e) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('load-err').classList.add('show');
+    }
+  }
+
+  /* ── CSV → rows ── */
+  function csvToRows(text) {
+    const rows = [];
+    for (const line of text.split('\n')) {
+      const cols = []; let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; continue; }
+        cur += ch;
+      }
+      cols.push(cur.trim());
+      rows.push(cols);
+    }
+    return rows;
+  }
+
+  /* ── 파싱 (계산기와 동일 로직) ── */
+  function parseSheet(text) {
+    const rows = csvToRows(text);
+    sheetData = {}; orderedKeys = [];
+    const sections = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const c0 = (rows[i][0] || '').toString().trim();
+      if (c0 === '아이템 명(KR)' || c0 === '아이템명(KR)' || c0.includes('아이템 명(KR)')) {
+        let nameRow = i - 1;
+        while (nameRow >= 0 && !(rows[nameRow][0] || '').toString().trim()) nameRow--;
+        const rawName = nameRow >= 0 ? (rows[nameRow][0] || '').toString() : '';
+        const crateName = rawName
+          .replace(/[■▣□◆◇●◎▷\[\]]/g, '')
+          .replace(/\s*\d{1,2}:\d{2}~?\s*$/, '')
+          .replace(/~\s*$/, '')
+          .replace(/\s+/g, ' ').trim();
+        if (crateName) sections.push({ crateName, headerRow: i, nameRow });
+      }
+    }
+
+    for (let s = 0; s < sections.length; s++) {
+      const { crateName, headerRow, nameRow } = sections[s];
+      const endRow = s + 1 < sections.length ? sections[s+1].headerRow - 2 : rows.length;
+      const hdr = rows[headerRow].map(c => (c||'').toString().trim());
+      const gradeIdx = hdr.findIndex(h => h.includes('등급'));
+      const probIdx  = hdr.findIndex(h => h === '확률' || h.startsWith('확률'));
+
+      const items = [];
+      for (let r = headerRow + 1; r < endRow; r++) {
+        const row = rows[r];
+        const c0  = (row[0]||'').toString().trim();
+        if (!c0) continue;
+        if (c0 === '총합' || c0.startsWith('*') || /^\d+\./.test(c0)) continue;
+        const grade = gradeIdx !== -1 ? (row[gradeIdx]||'').toString().trim() : '';
+        let probNum = probIdx !== -1 ? parseFloat((row[probIdx]||'').toString().replace('%','')) : NaN;
+        if (isNaN(probNum) || probNum <= 0) {
+          for (let ci = 2; ci < row.length; ci++) {
+            const n = parseFloat((row[ci]||'').toString().replace('%',''));
+            if (!isNaN(n) && n > 0 && n < 100) { probNum = n; break; }
+          }
+        }
+        if (isNaN(probNum) || probNum <= 0 || probNum >= 100) continue;
+        items.push({ item: c0, grade, prob: probNum });
+      }
+      if (items.length === 0) continue;
+
+      let key = crateName;
+      if (sheetData[key]) {
+        const bCell = (rows[nameRow] ? (rows[nameRow][1]||rows[nameRow][2]||'') : '').toString();
+        const dateM = bCell.match(/\d{4}-\d{2}-\d{2}/)||bCell.match(/\d{2,4}[.\-]\d{1,2}[.\-]\d{1,2}/);
+        key = dateM ? `${crateName} (${dateM[0]})` : `${crateName} (${orderedKeys.filter(k=>k===crateName||k.startsWith(crateName+' (')).length+1})`;
+      }
+      sheetData[key] = items;
+      orderedKeys.push(key);
+    }
+    orderedKeys.reverse();
+  }
+
+  /* ── 상자 드롭다운 ── */
+  function populateCrates() {
+    const sel = document.getElementById('crate-select');
+    sel.innerHTML = '<option value="">— 상자를 선택하세요 —</option>';
+    for (const k of orderedKeys) {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = k;
+      sel.appendChild(opt);
+    }
+  }
+
+  /* ── 전체 카드 뷰 ── */
+  function renderAllGrid() {
+    const grid = document.getElementById('all-grid');
+    grid.innerHTML = '';
+    for (const key of orderedKeys) {
+      const items = sheetData[key] || [];
+      const gradeSum = {};
+      let total = 0;
+      for (const {grade, prob} of items) {
+        if (grade) gradeSum[grade] = (gradeSum[grade]||0) + prob;
+        total += prob;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'crate-card';
+      card.dataset.name = key.toLowerCase();
+
+      const sortedGrades = Object.keys(gradeSum).sort((a,b)=>{
+        const ai=GRADE_ORDER.indexOf(a); const bi=GRADE_ORDER.indexOf(b);
+        return (ai===-1?99:ai)-(bi===-1?99:bi);
+      });
+
+      let gradeTags = '';
+      for (const g of sortedGrades) {
+        const gs = GRADE_STYLE[g]||{bg:'rgba(100,100,100,.2)',text:'#aaa'};
+        const pct = Math.round(gradeSum[g]*100)/100;
+        gradeTags += `<span class="cc-gtag" style="background:${gs.bg};color:${gs.text}">${g} ${pct}%</span>`;
+      }
+
+      card.innerHTML = `
+        <div class="cc-name">${key}</div>
+        <div class="cc-meta">
+          <span>아이템 <span class="hl">${items.length}</span>종</span>
+          <span>합계 <span class="hl">${Math.round(total*100)/100}%</span></span>
+        </div>
+        <div class="cc-grades">${gradeTags}</div>`;
+      card.onclick = () => { switchTab('single'); selectCrate(key); };
+      grid.appendChild(card);
+    }
+  }
+
+  function filterAllCards() {
+    const q = document.getElementById('all-search').value.toLowerCase();
+    document.querySelectorAll('.crate-card').forEach(c => {
+      c.style.display = c.dataset.name.includes(q) ? '' : 'none';
+    });
+  }
+
+  /* ── 탭 전환 ── */
+  function switchTab(tab) {
+    document.getElementById('tab-all').classList.toggle('active', tab==='all');
+    document.getElementById('tab-single').classList.toggle('active', tab==='single');
+    document.getElementById('all-view').style.display    = tab==='all'    ? 'block' : 'none';
+    document.getElementById('single-view').style.display = tab==='single' ? 'block' : 'none';
+    if (tab==='all') { document.getElementById('all-view').classList.add('show'); }
+  }
+
+  /* ── 상자 선택 (드롭다운) ── */
+  function onCrateChange() {
+    const val = document.getElementById('crate-select').value;
+    if (!val) return;
+    selectCrate(val);
+  }
+
+  function selectCrate(key) {
+    document.getElementById('crate-select').value = key;
+    currentCrate = key;
+    activeGrade = 'ALL';
+
+    const items = sheetData[key] || [];
+    maxProb = Math.max(...items.map(i=>i.prob));
+
+    // Sort: grade order → prob asc
+    const sorted = [...items].sort((a,b)=>{
+      const ai=GRADE_ORDER.indexOf(a.grade); const bi=GRADE_ORDER.indexOf(b.grade);
+      if (ai===bi) return a.prob-b.prob;
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
+
+    // Panel meta
+    let totalProb = items.reduce((s,i)=>s+i.prob, 0);
+    const gradeSum = {};
+    for (const {grade,prob} of items) { if(grade) gradeSum[grade]=(gradeSum[grade]||0)+prob; }
+
+    document.getElementById('panel-title').textContent = key;
+    document.getElementById('panel-meta').innerHTML =
+      `<span>아이템 <span class="hl">${items.length}종</span></span>` +
+      `<span>총합 <span class="hl">${Math.round(totalProb*100)/100}%</span></span>`;
+
+    // Grade summary chips
+    const gsum = document.getElementById('grade-summary');
+    gsum.innerHTML = '';
+    const sortedGrades = Object.keys(gradeSum).sort((a,b)=>{
+      const ai=GRADE_ORDER.indexOf(a); const bi=GRADE_ORDER.indexOf(b);
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
+    for (const g of sortedGrades) {
+      const gs = GRADE_STYLE[g]||{bg:'rgba(100,100,100,.2)',text:'#aaa',border:'rgba(100,100,100,.3)'};
+      const pct = Math.round(gradeSum[g]*1000)/1000;
+      const cnt = items.filter(i=>i.grade===g).length;
+      const chip = document.createElement('div');
+      chip.className = 'gs-chip';
+      chip.style.cssText=`background:${gs.bg};color:${gs.text};border:1px solid ${gs.border}`;
+      chip.innerHTML=`<span class="gname">${g}</span><span class="gpct">${pct}%</span><span class="gcnt">${cnt}종</span>`;
+      gsum.appendChild(chip);
+    }
+
+    // Grade filter chips
+    const gf = document.getElementById('grade-filter');
+    gf.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className='gf-chip active'; allBtn.textContent='ALL';
+    allBtn.onclick=()=>setGradeFilter('ALL');
+    gf.appendChild(allBtn);
+    for (const g of sortedGrades) {
+      const gs = GRADE_STYLE[g]||{text:'#aaa'};
+      const btn = document.createElement('button');
+      btn.className='gf-chip'; btn.textContent=g;
+      btn.style.color=gs.text;
+      btn.dataset.grade=g;
+      btn.onclick=()=>setGradeFilter(g);
+      gf.appendChild(btn);
+    }
+
+    // Table
+    renderTable(sorted);
+
+    document.getElementById('crate-panel').classList.add('show');
+    document.getElementById('item-filter-bar').style.display='flex';
+    document.getElementById('item-search').value='';
+  }
+
+  function setGradeFilter(grade) {
+    activeGrade = grade;
+    document.querySelectorAll('#grade-filter .gf-chip').forEach(c=>{
+      c.classList.toggle('active',
+        grade==='ALL' ? c.textContent==='ALL' : c.dataset.grade===grade);
+    });
+    filterTable();
+  }
+
+  function renderTable(items) {
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    let cumul = 0;
+    const sorted = [...items].sort((a,b)=>{
+      const ai=GRADE_ORDER.indexOf(a.grade); const bi=GRADE_ORDER.indexOf(b.grade);
+      if(ai===bi) return a.prob-b.prob;
+      return (ai===-1?99:ai)-(bi===-1?99:bi);
+    });
+
+    sorted.forEach((item, idx)=>{
+      cumul += item.prob;
+      const gs = GRADE_STYLE[item.grade];
+      const barPct = maxProb > 0 ? (item.prob/maxProb*100).toFixed(1) : 0;
+      const barColor = gs ? gs.bar : '#5a6a7a';
+      const gradeBadge = item.grade && gs
+        ? `<span class="grade-tag" style="background:${gs.bg};color:${gs.text}">${item.grade}</span>`
+        : (item.grade ? `<span class="grade-tag" style="background:rgba(100,100,100,.2);color:#aaa">${item.grade}</span>` : '');
+      const tr = document.createElement('tr');
+      tr.dataset.grade = item.grade;
+      tr.dataset.item  = item.item.toLowerCase();
+      tr.innerHTML = `
+        <td class="td-rank">${idx+1}</td>
+        <td class="td-item">${item.item}</td>
+        <td class="td-grade">${gradeBadge}</td>
+        <td class="td-prob"><span class="prob-val">${item.prob}%</span></td>
+        <td class="td-bar">
+          <div class="bar-bg"><div class="bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+        </td>
+        <td class="td-cumul">${Math.round(cumul*1000)/1000}%</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function filterTable() {
+    const q = document.getElementById('item-search').value.toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('#table-body tr').forEach(tr=>{
+      const gradeOk = activeGrade==='ALL' || tr.dataset.grade===activeGrade;
+      const searchOk= !q || tr.dataset.item.includes(q);
+      const show = gradeOk && searchOk;
+      tr.classList.toggle('hidden-row', !show);
+      if(show) visible++;
+    });
+    document.getElementById('empty-msg').style.display = visible===0?'block':'none';
+  }
+
+  loadSheet();
+</script>
+</body>
+</html>
