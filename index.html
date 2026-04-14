@@ -616,7 +616,51 @@
     });
     document.getElementById('sb-lbl').textContent = `${vis}개 상자`;
   }
+function filterAllView() {
+  const q = (document.getElementById('all-search-input')?.value || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('#all-grid .crate-card');
+  let vis = 0;
 
+  cards.forEach(card => {
+    const key = card.querySelector('.cc-name')?.textContent || '';
+
+    // 상자 이름 매칭
+    const nameMatch = key.toLowerCase().includes(q);
+
+    // 아이템 이름 매칭
+    const itemMatch = q && (sheetData[key] || []).some(i => i.item.toLowerCase().includes(q));
+
+    const show = !q || nameMatch || itemMatch;
+    card.style.display = show ? '' : 'none';
+
+    if (show) {
+      vis++;
+      // 아이템 매칭 시 cc-meta에 매칭 개수 표시
+      const meta = card.querySelector('.cc-meta');
+      if (meta) {
+        if (q && itemMatch && !nameMatch) {
+          const matchCount = (sheetData[key] || []).filter(i => i.item.toLowerCase().includes(q)).length;
+          // 이미 추가된 뱃지 제거 후 재추가
+          const prev = meta.querySelector('.match-badge');
+          if (prev) prev.remove();
+          const badge = document.createElement('span');
+          badge.className = 'match-badge';
+          badge.style.cssText = 'color:var(--accent-lt);font-weight:600';
+          badge.textContent = `"${q}" ${matchCount}개 매칭`;
+          meta.appendChild(badge);
+        } else {
+          const prev = meta.querySelector('.match-badge');
+          if (prev) prev.remove();
+        }
+      }
+    }
+  });
+
+  const countEl = document.getElementById('all-search-count');
+  const emptyEl = document.getElementById('all-empty');
+  if (countEl) countEl.textContent = q ? `${vis}개 결과` : '';
+  if (emptyEl) emptyEl.style.display = vis === 0 ? 'block' : 'none';
+}
   /* ── VIEW SWITCH ── */
   function switchView(v) {
     currentView = v;
@@ -664,14 +708,26 @@
       </div>`;
     }).join('');
 
-    document.getElementById('content').innerHTML = `
-      <div class="all-view">
-        <div class="view-header">
-          <div class="view-title">전체 상자 목록</div>
-          <div class="view-sub">${orderedKeys.length}개 상자 · 시트 실시간 연동</div>
-        </div>
-        <div class="crate-grid" id="all-grid">${cards}</div>
-      </div>`;
+    
+// 변경 후
+document.getElementById('content').innerHTML = `
+  <div class="all-view">
+    <div class="view-header">
+      <div class="view-title">전체 상자 목록</div>
+      <div class="view-sub">${orderedKeys.length}개 상자 · 시트 실시간 연동</div>
+    </div>
+    <div class="filter-row" style="margin-bottom:14px">
+      <div class="filter-search">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+        </svg>
+        <input type="text" id="all-search-input" placeholder="상자 이름 또는 아이템 검색..." oninput="filterAllView()">
+      </div>
+      <div id="all-search-count" style="font-size:11px;font-family:var(--mono);color:var(--txt3);white-space:nowrap;padding:0 4px"></div>
+    </div>
+    <div class="crate-grid" id="all-grid">${cards}</div>
+    <div class="t-empty" id="all-empty" style="padding:36px;text-align:center;font-size:12px;color:var(--txt3);font-family:var(--mono);display:none">검색 결과 없음</div>
+  </div>`;
   }
 
   function showPickPrompt() {
